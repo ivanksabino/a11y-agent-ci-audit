@@ -1,0 +1,29 @@
+# Exemplo de quality gate de acessibilidade no Azure DevOps.
+# O agente lê base/head do PR via SYSTEM_PULLREQUEST_* (resolve_refs detecta).
+# exit code != 0 reprova o PR.
+steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.11'
+
+  - script: |
+      python -m pip install --upgrade pip
+      pip install -e ".[agent]"
+    displayName: 'Instalar a11y-auditor-agent'
+
+  - script: |
+      # Garante que a base do PR existe localmente para o git diff base...head
+      git fetch origin "$(System.PullRequest.TargetBranch)" --depth=1 || true
+      python -m a11y_auditor
+    displayName: 'A11Y Quality Gate (diff do PR)'
+    env:
+      MODEL_API_KEY: $(MODEL_API_KEY)         # secret do pipeline (key do provider)
+      A11Y_AUDITOR_MODEL: claude-opus-4-8     # opcional (default)
+      # Para usar Gemini: instalar ".[gemini]", setar A11Y_AUDITOR_MODEL=gemini-2.5-pro
+      # (ou A11Y_AUDITOR_PROVIDER: google) e MODEL_API_KEY com a Google API key.
+
+  # O veredito completo fica em a11y-verdict.json (artefato); o campo
+  # report_markdown pode ser postado como comentário no PR por um passo seguinte.
+  - publish: a11y-verdict.json
+    artifact: a11y-verdict
+    condition: always()
