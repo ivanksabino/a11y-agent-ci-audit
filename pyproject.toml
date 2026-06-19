@@ -16,13 +16,20 @@ dependencies = [
 # agno + provider só são necessários para a execução real do agente (LLM).
 # Os módulos determinísticos (diff, schema, report, knowledge) e os testes
 # NÃO dependem disso — agno é importado de forma lazy em agent.py.
+#
+# agno é fixado em <2.6: o 2.6.x passou a importar (eagerly) o módulo
+# `google.genai.interactions` (`step_delta`), uma API ainda em churn no
+# google-genai — o pin frouxo do agno (>=1.52) resolve para um par
+# agno/google-genai incompatível e quebra o import do Gemini. O 2.5.x usa a
+# API estável do google-genai e serve Anthropic (com cache_system_prompt) e
+# Gemini. Validado: agno 2.5.17 + google-genai 2.9.0.
 agent = [
-    "agno",
+    "agno>=2.5,<2.6",
     "anthropic",
 ]
 # Provider Google Gemini (alternativa ao Anthropic). agno usa o SDK google-genai.
 gemini = [
-    "agno",
+    "agno>=2.5,<2.6",
     "google-genai",
 ]
 dev = [
