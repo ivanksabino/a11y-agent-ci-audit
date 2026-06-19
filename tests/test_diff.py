@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import subprocess
+import types
+
 from a11y_auditor.diff import (
     DiffLine,
     Hunk,
     build_audit_payload,
     filter_relevant_hunks,
+    get_pr_diff,
     is_a11y_relevant,
     parse_diff_hunks,
     resolve_refs,
@@ -289,3 +293,34 @@ def test_resolve_refs_github_actions(monkeypatch) -> None:
     base, head = resolve_refs()
     assert base == "origin/main"
     assert head == "origin/feature-x"
+
+
+# --- get_pr_diff: decode robusto de bytes nao-UTF-8 ------------------------
+
+
+def test_get_pr_diff_decodifica_bytes_nao_utf8(monkeypatch) -> None:
+    """Diff com byte nao-UTF-8 (ex.: Latin-1) NAO pode virar diff vazio.
+
+    Regressao: antes, text=True estourava UnicodeDecodeError (subclasse de
+    ValueError), que era engolido e devolvia "" -> gate aprovava sem olhar o
+    diff. Agora usa errors="replace": o byte invalido vira U+FFFD e o diff
+    sobrevive.
+    """
+    captured = {}
+
+    def fake_run(cmd, **kwargs):
+        captured.update(kwargs)
+        # Simula o que subprocess faz com encoding utf-8 + errors=replace:
+        # o byte 0xe7 (ç em Latin-1) vira o caractere de substituicao.
+        raw = b"diff --git a/f.tsx b/f.tsx\n+const x = 'a\xe7\xe3o';\n"
+        decoded = raw.decode(kwargs.get("encoding", "utf-8"), errors=kwargs.get("errors", "strict"))
+        return types.SimpleNamespace(returncode=0, stdout=decoded, stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    out = get_pr_diff("main", "HEAD", repo_path="/qualquer")
+    assert out != ""  # nao virou vazio
+    assert "diff --git" in out
+    # garante o decode tolerante (utf-8 + replace), nao text=True cru
+    assert captured.get("errors") == "replace"
+    assert captured.get("encoding") == "utf-8"

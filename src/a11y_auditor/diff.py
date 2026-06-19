@@ -85,6 +85,12 @@ def get_pr_diff(
     """Executa `git diff base...head` filtrando arquivos de codigo.
 
     check=False; em qualquer erro devolve "" (gate aprova por seguranca).
+
+    Decodifica com errors="replace": diffs reais contem arquivos salvos em
+    encodings legados (ex.: Latin-1 com acentos), cujos bytes nao-UTF-8 fariam
+    o decode estourar UnicodeDecodeError (subclasse de ValueError) — antes isso
+    era silenciosamente engolido e devolvia "", fazendo o gate aprovar sem
+    nunca olhar o diff. Os bytes invalidos viram U+FFFD; o diff e preservado.
     """
     cmd = [
         "git",
@@ -103,8 +109,9 @@ def get_pr_diff(
         result = subprocess.run(
             cmd,
             check=False,
-            text=True,
             capture_output=True,
+            encoding="utf-8",
+            errors="replace",
         )
     except (OSError, ValueError):
         return ""
