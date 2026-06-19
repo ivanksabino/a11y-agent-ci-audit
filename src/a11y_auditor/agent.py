@@ -72,6 +72,22 @@ def _build_system_message() -> str:
     return build_knowledge_block()
 
 
+def _missing_dep_error(provider: str, exc: ModuleNotFoundError) -> SystemExit:
+    """Erro acionável quando o agno/SDK do provider não está instalado.
+
+    Devolve SystemExit (mensagem limpa, sem traceback) com o extra do pip correto
+    para o provider resolvido.
+    """
+    extra = "gemini" if provider == "google" else "agent"
+    return SystemExit(
+        f"\nDependencia ausente para rodar o LLM (provider '{provider}'): {exc.name}.\n"
+        f"Instale o extra do provider e defina a API key:\n"
+        f'    pip install -e ".[{extra}]"\n'
+        f"    export MODEL_API_KEY=<sua-key-do-provider>\n"
+        f"(Os testes e os curto-circuitos sem a11y nao precisam dessas deps.)"
+    )
+
+
 def _build_model(model_id: str, provider: str) -> Any:
     """Instancia o modelo do agno do provider resolvido (anthropic ou google).
 
@@ -92,11 +108,17 @@ def _build_model(model_id: str, provider: str) -> Any:
     api_key = _api_key()
 
     if provider == "google":
-        from agno.models.google import Gemini  # import lazy
+        try:
+            from agno.models.google import Gemini  # import lazy
+        except ModuleNotFoundError as exc:
+            raise _missing_dep_error(provider, exc) from exc
 
         return _instantiate(Gemini, model_id, system_message, api_key, cache=False)
 
-    from agno.models.anthropic import Claude  # import lazy
+    try:
+        from agno.models.anthropic import Claude  # import lazy
+    except ModuleNotFoundError as exc:
+        raise _missing_dep_error(provider, exc) from exc
 
     return _instantiate(Claude, model_id, system_message, api_key, cache=True)
 
@@ -190,10 +212,14 @@ def build_agent(model_id: Optional[str] = None, provider: Optional[str] = None) 
     - temperature baixa + prompt caching do bloco estático para perf de CI.
     - provider anthropic (default) ou google/gemini, resolvido pelo id/env.
     """
-    from agno.agent import Agent  # import lazy
-
     resolved = _resolve_model_id(model_id)
     resolved_provider = _resolve_provider(provider, resolved)
+
+    try:
+        from agno.agent import Agent  # import lazy
+    except ModuleNotFoundError as exc:
+        raise _missing_dep_error(resolved_provider, exc) from exc
+
     model = _build_model(resolved, resolved_provider)
 
     return Agent(
