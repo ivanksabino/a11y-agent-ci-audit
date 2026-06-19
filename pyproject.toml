@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "a11y-auditor-agent"
+version = "0.1.0"
+description = "Agente auditor de acessibilidade (WCAG 2.2 AA + ABNT NBR 17060) orientado a diff de PR, para quality gate de CI em React Native."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2",
+]
+
+[project.optional-dependencies]
+# agno + provider só são necessários para a execução real do agente (LLM).
+# Os módulos determinísticos (diff, schema, report, knowledge) e os testes
+# NÃO dependem disso — agno é importado de forma lazy em agent.py.
+agent = [
+    "agno",
+    "anthropic",
+]
+# Provider Google Gemini (alternativa ao Anthropic). agno usa o SDK google-genai.
+gemini = [
+    "agno",
+    "google-genai",
+]
+dev = [
+    "pytest",
+]
+
+[project.scripts]
+a11y-gate = "a11y_auditor.gate:cli"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+a11y_auditor = ["data/*.md"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q"
