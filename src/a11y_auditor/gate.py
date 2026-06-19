@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 
 from a11y_auditor.diff import (
     build_audit_payload,
@@ -122,11 +123,29 @@ def run_gate(
     return verdict
 
 
-def _write_artifact(verdict: AuditVerdict, out_path: str) -> None:
-    """Grava o veredito como JSON (UTF-8, sem escapar nao-ASCII)."""
-    with open(out_path, "w", encoding="utf-8") as fh:
+_DEFAULT_ARTIFACT_NAME = "a11y-verdict.json"
+
+
+def _resolve_out_path(out_path: str) -> str:
+    """Resolve o caminho de saida do artefato.
+
+    Aceita `~` e, se `out_path` for um diretorio existente (ex.: --out ~/Downloads),
+    grava nele com o nome padrao a11y-verdict.json em vez de tentar abrir o
+    diretorio como arquivo.
+    """
+    expanded = os.path.expanduser(out_path)
+    if os.path.isdir(expanded):
+        return os.path.join(expanded, _DEFAULT_ARTIFACT_NAME)
+    return expanded
+
+
+def _write_artifact(verdict: AuditVerdict, out_path: str) -> str:
+    """Grava o veredito como JSON (UTF-8, sem escapar nao-ASCII). Retorna o caminho final."""
+    final_path = _resolve_out_path(out_path)
+    with open(final_path, "w", encoding="utf-8") as fh:
         json.dump(verdict.model_dump(), fh, ensure_ascii=False, indent=2)
         fh.write("\n")
+    return final_path
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -194,6 +213,7 @@ def main(argv: list[str] | None = None) -> int:
         f"findings: {len(verdict.findings)}"
     )
     print(verdict.summary)
+    print(f"Artefato: {_resolve_out_path(args.out)}")
 
     return 1 if verdict.block else 0
 

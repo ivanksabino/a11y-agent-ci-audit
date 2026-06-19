@@ -90,6 +90,24 @@ def test_diff_vazio_aprova_sem_agno(monkeypatch, tmp_path) -> None:
     assert data["block"] is False
 
 
+# --- --out aceita diretorio ------------------------------------------------
+
+
+def test_out_diretorio_grava_arquivo_padrao(monkeypatch, tmp_path) -> None:
+    """--out apontando para um diretorio grava a11y-verdict.json dentro dele."""
+    monkeypatch.setattr(gate_mod, "get_pr_diff", lambda **kw: "")
+    verdict = run_gate(
+        base_ref="origin/main",
+        head_ref="HEAD",
+        out_path=str(tmp_path),  # diretorio, nao arquivo
+    )
+    assert verdict.block is False
+    written = tmp_path / "a11y-verdict.json"
+    assert written.is_file()
+    data = json.loads(written.read_text(encoding="utf-8"))
+    assert data["block"] is False
+
+
 # --- curto-circuito: sem hunk relevante ------------------------------------
 
 
