@@ -205,7 +205,9 @@ def _log_cache_usage(result: Any) -> None:
 def build_agent(model_id: Optional[str] = None, provider: Optional[str] = None) -> Any:
     """Monta o Agent do agno (import lazy).
 
-    - response_model=AuditVerdict (saída estruturada validada por pydantic).
+    - output_schema=AuditVerdict (saída estruturada validada por pydantic).
+      O agno 2.x usa `output_schema`; versões antigas usavam `response_model`
+      — tentamos o nome novo e caímos no antigo via TypeError.
     - instructions=build_instructions() (regras de auditoria, AA only, pt-BR...).
     - SEM tools: o diff já vem pré-parseado no prompt => menos round-trips/tokens.
     - markdown=False: o report markdown canônico é re-renderizado no gate.
@@ -222,13 +224,17 @@ def build_agent(model_id: Optional[str] = None, provider: Optional[str] = None) 
 
     model = _build_model(resolved, resolved_provider)
 
-    return Agent(
-        model=model,
-        response_model=AuditVerdict,
-        instructions=build_instructions(),
-        tools=None,
-        markdown=False,
-    )
+    common = {
+        "model": model,
+        "instructions": build_instructions(),
+        "tools": None,
+        "markdown": False,
+    }
+    try:
+        return Agent(output_schema=AuditVerdict, **common)
+    except TypeError:
+        # agno antigo: o parâmetro de saída estruturada chamava-se response_model.
+        return Agent(response_model=AuditVerdict, **common)
 
 
 def _get_cached_agent(model_id: Optional[str], provider: Optional[str]) -> Any:
