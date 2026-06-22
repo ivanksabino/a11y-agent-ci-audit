@@ -309,6 +309,25 @@ Imagem que carrega informação precisa de label; imagem decorativa deve ser **e
 </Modal>
 ```
 
+> **Exceção — componente do DS já marca o modal (NÃO é finding):** quando o
+> modal é um `TgrDrawer`/`TgrSuperDrawer` do Tangerina, o `accessibilityViewIsModal`
+> já é renderizado internamente (desde 6.1.0) e o fundo já é escondido do leitor
+> (desde 6.2.0). Por isso **remover** o wrapper do app não é regressão:
+>
+> ```tsx
+> // ANTES (app GOL) — wrapper redundante em volta do TgrDrawer
+> <View accessibilityViewIsModal={true}>
+>   <TgrDrawer opened={opened} onClose={onClose}>...</TgrDrawer>
+> </View>
+>
+> // DEPOIS — wrapper removido; o TgrDrawer do DS já garante o comportamento
+> <TgrDrawer opened={opened} onClose={onClose}>...</TgrDrawer>
+> ```
+>
+> Veredito esperado: **não gerar 🔴**. Suprimir (DS garante) ou, se a versão do
+> DS for incerta, 🟡 "revisar: responsabilidade migrada para o Tangerina". O
+> agente não vê o bump de versão no `package.json`, então na dúvida fica em 🟡.
+
 ---
 
 ## 10. Erro de validação não anunciado — `a11y/announce-on-error-missing` / `no-live-region-on-status`

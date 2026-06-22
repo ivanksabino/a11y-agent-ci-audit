@@ -72,6 +72,28 @@ DS_ALLOWLIST: dict[str, dict[str, list[str]]] = {
         "injects": ["label associado via prop label"],
         "suppresses": ["a11y/form-input-without-label"],  # se prop label existir
     },
+    # TgrDrawer / TgrSuperDrawer: renderizam internamente um <Modal
+    # accessibilityViewIsModal={true}> (DrawerContainer) desde a 6.1.0; a partir
+    # da 6.2.0 tambem escondem o fundo do leitor (importantForAccessibility=
+    # "no-hide-descendants" + accessibilityElementsHidden) e tratam
+    # onAccessibilityEscape. => NAO exigir accessibilityViewIsModal nem
+    # ocultacao de fundo no nivel do app GOL ao redor de um Drawer do DS.
+    "TgrDrawer": {
+        "injects": [
+            "accessibilityViewIsModal=true (Modal interno, desde 6.1.0)",
+            "esconde fundo do leitor (importantForAccessibility=no-hide-descendants "
+            "+ accessibilityElementsHidden, desde 6.2.0)",
+            "onAccessibilityEscape (desde 6.2.0)",
+        ],
+        "suppresses": ["a11y/modal-without-view-is-modal"],
+    },
+    "TgrSuperDrawer": {
+        "injects": [
+            "accessibilityViewIsModal=true (Modal interno, desde 6.1.0)",
+            "esconde fundo do leitor (desde 6.2.0)",
+        ],
+        "suppresses": ["a11y/modal-without-view-is-modal"],
+    },
 }
 
 
@@ -103,6 +125,29 @@ Nuance pai -> filhos:
   anuncio), isso PODE ser regra de negocio legitima. Rebaixe de 🔴 para 🟡,
   sinalizando "revisar: label movido para o pai - intencional?". So 🔴 se a
   prop sumiu e NAO reapareceu em nenhum ancestral do mesmo hunk.
+
+Nuance DS (Tangerina) -> migracao de responsabilidade para o Design System:
+  ANTES de marcar uma alteracao/remocao/adicao como 🔴 critico, verifique se
+  ela ocorre AO REDOR de um componente do Design System (Tangerina) que JA
+  prove a prop internamente (ver DS_ALLOWLIST). Causa comum de falso positivo:
+  uma atualizacao do Tangerina passou a injetar a prop dentro do componente, e
+  o app GOL entao REMOVE a prop redundante do seu codigo — a remocao NAO e
+  regressao, e sim transferencia de responsabilidade do app para o DS.
+    - Exemplo: remover o `<View accessibilityViewIsModal>` que envolvia um
+      `TgrDrawer`/`TgrSuperDrawer` NAO e regressao — o DrawerContainer do DS
+      ja renderiza `<Modal accessibilityViewIsModal={true}>` (desde 6.1.0) e
+      esconde o fundo do leitor (desde 6.2.0).
+    - O mesmo vale para trocar props equivalentes: `aria-hidden` no RN mapeia
+      para accessibilityElementsHidden (iOS) + importantForAccessibility=
+      "no-hide-descendants" (Android); trocar os dois props pelo `aria-hidden`
+      NAO e regressao.
+  Acao: se a prop e 100% garantida pelo componente DS -> SUPRIMA o finding;
+  se houver duvida (versao do DS incerta) -> rebaixe para 🟡 com
+  "revisar: responsabilidade migrada para o Tangerina - confirmar versao do DS".
+  IMPORTANTE: o agente audita apenas .ts/.tsx/.js/.jsx e NAO enxerga o bump de
+  versao em package.json. Por isso, diante de uma prop critica que some ao
+  redor de um componente DS conhecido, assuma a hipotese de atualizacao do DS
+  e prefira 🟡 + revisao humana a 🔴 (nunca bloqueie por essa causa sozinha).
 """
 
 
@@ -217,6 +262,20 @@ def build_instructions() -> list[str]:
         "runtime) e NUNCA bloqueiam o merge.",
         "Se uma prop sumiu dos filhos mas reaparece no componente pai do "
         "mesmo hunk, rebaixe de 🔴 para 🟡 e sinalize para revisao humana.",
+        "Mudancas em props de a11y ao redor de componentes do Design System "
+        "(Tangerina) — alteracoes, REMOCOES e adicoes, sobretudo as criticas — "
+        "exigem checar se a causa e uma atualizacao do DS: ANTES de marcar 🔴, "
+        "veja se o componente DS ja prove a prop internamente (DS_ALLOWLIST). "
+        "Ex.: TgrDrawer/TgrSuperDrawer ja renderizam accessibilityViewIsModal "
+        "(desde 6.1.0) e escondem o fundo do leitor (desde 6.2.0); remover o "
+        "<View accessibilityViewIsModal> que os envolvia NAO e regressao, e sim "
+        "migracao de responsabilidade do app GOL para o DS.",
+        "Nesses casos de migracao para o DS: se a prop e 100% garantida pelo "
+        "componente Tangerina, SUPRIMA o finding; se houver duvida sobre a "
+        "versao do DS, rebaixe para 🟡 com 'revisar: responsabilidade migrada "
+        "para o Tangerina - confirmar versao do DS'. O agente NAO enxerga o bump "
+        "de versao (package.json fora do escopo .ts/.tsx) — entao, na duvida, "
+        "prefira 🟡 + revisao humana a 🔴 e nunca bloqueie so por essa causa.",
         "Calcule coverage sobre o DELTA do PR: interactive_added = elementos "
         "interativos/visuais relevantes adicionados; compliant = quantos ja "
         "vem com a11y adequada; regressions = numero de findings 🔴.",
