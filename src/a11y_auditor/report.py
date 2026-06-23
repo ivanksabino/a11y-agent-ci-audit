@@ -22,8 +22,8 @@ _TIER_ORDER: dict[Tier, int] = {
 }
 
 _FOOTER = (
-    "<sub>Nível AA · 🔴 regressão e 🟠 novo-sem-a11y bloqueiam · "
-    "🟡 não bloqueia · critérios de runtime validados no BrowserStack</sub>"
+    "<sub>Nível AA · 🔴 regressão bloqueia · 🟠 novo-sem-a11y e 🟡 não "
+    "bloqueiam (informativos) · critérios de runtime validados no BrowserStack</sub>"
 )
 
 

@@ -75,8 +75,12 @@ class AuditVerdict(BaseModel):
 
 
 def compute_block(findings: list[Finding]) -> bool:
-    """True se algum finding tem tier critico ou atencao."""
-    return any(f.tier in {Tier.critico, Tier.atencao} for f in findings)
+    """True somente se algum finding tem tier critico (regressao).
+
+    Calibracao do gate: APENAS 🔴 critico bloqueia o merge. 🟠 atencao
+    (elemento novo sem a11y) e 🟡 warning informam, mas NAO bloqueiam.
+    """
+    return any(f.tier == Tier.critico for f in findings)
 
 
 def compute_coverage(

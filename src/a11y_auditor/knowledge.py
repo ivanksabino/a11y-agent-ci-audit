@@ -114,8 +114,8 @@ Para cada finding candidato no diff:
   4. Senao                                  -> 🟡 warning
 
 Regra do bloqueio (compute_block):
-  - 🔴 critico E 🟠 atencao BLOQUEIAM o merge.
-  - 🟡 warning NUNCA bloqueia (so informa).
+  - APENAS 🔴 critico (regressao) BLOQUEIA o merge.
+  - 🟠 atencao e 🟡 warning NAO bloqueiam (so informam).
   - O gate NUNCA bloqueia em criterio que so e verificavel em runtime
     (contraste, magnificacao, truncamento, etc.): runtime => no maximo 🟡.
 
@@ -279,7 +279,8 @@ def build_instructions() -> list[str]:
         "Calcule coverage sobre o DELTA do PR: interactive_added = elementos "
         "interativos/visuais relevantes adicionados; compliant = quantos ja "
         "vem com a11y adequada; regressions = numero de findings 🔴.",
-        "block = True se houver qualquer finding 🔴 critico OU 🟠 atencao.",
+        "block = True SOMENTE se houver algum finding 🔴 critico (regressao). "
+        "🟠 atencao e 🟡 warning NAO bloqueiam — apenas informam.",
         "Para cada finding preencha: rule_id, criterion, tier, change_type, "
         "detectability, file, line (linha pos-PR; para removed, a linha do "
         "hunk), message (1 frase pt-BR), fix (solucao curta pt-BR baseada "

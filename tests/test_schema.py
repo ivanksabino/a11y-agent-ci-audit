@@ -36,8 +36,9 @@ def test_compute_block_critico_bloqueia() -> None:
     assert compute_block([_finding(Tier.critico)]) is True
 
 
-def test_compute_block_atencao_bloqueia() -> None:
-    assert compute_block([_finding(Tier.atencao)]) is True
+def test_compute_block_atencao_nao_bloqueia() -> None:
+    # Calibracao: apenas 🔴 critico bloqueia; 🟠 atencao agora so informa.
+    assert compute_block([_finding(Tier.atencao)]) is False
 
 
 def test_compute_block_warning_nao_bloqueia() -> None:
